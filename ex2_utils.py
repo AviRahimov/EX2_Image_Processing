@@ -8,7 +8,7 @@ def myID() -> np.int:
     Return my ID (not the friend's ID I copied from)
     :return: int
     """
-    return 214423147
+    return np.int(214423147)
 
 
 def conv1D(in_signal: np.ndarray, k_size: np.ndarray) -> np.ndarray:
@@ -122,7 +122,18 @@ def blurImage1(in_image: np.ndarray, k_size: int) -> np.ndarray:
     :param k_size: Kernel size
     :return: The Blurred image
     """
-
+    # Create an array of indices centered at zero
+    indices = np.arange(k_size) - (k_size - 1) / 2
+    sigma = (k_size-1)/6
+    # Calculating the gaussian formula(1D array) provided in the lectures
+    gaussian_formula = np.exp(-indices ** 2 / (2 * sigma ** 2))
+    # create the second 1D array
+    kernel2 = (1 / (sigma * np.sqrt(2 * np.pi))) * gaussian_formula
+    # create the kernel by convolve the two 1D arrays
+    gaussian_kernel = np.outer(kernel2, gaussian_formula)
+    # normalized the kernel
+    gaussian_kernel = gaussian_kernel/np.sum(gaussian_kernel)
+    return conv2D(in_image, gaussian_kernel)
 
 def blurImage2(in_image: np.ndarray, k_size: int) -> np.ndarray:
     """
@@ -131,7 +142,15 @@ def blurImage2(in_image: np.ndarray, k_size: int) -> np.ndarray:
     :param k_size: Kernel size
     :return: The Blurred image
     """
+    if k_size%2 != 0:
+        raise "The kernel size should always be an odd number"
 
+    # the length for 99 percentile of gaussian pdf is 6sigma
+    sigma = (k_size-1)/6
+    kernel = cv2.getGaussianKernel(k_size, sigma)
+
+    blurred_img = cv2.filter2D(in_image, -1, kernel, borderType=cv2.BORDER_REPLICATE)
+    return blurred_img
 
 def edgeDetectionZeroCrossingSimple(img: np.ndarray) -> np.ndarray:
     """
