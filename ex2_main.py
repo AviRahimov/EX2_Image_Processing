@@ -170,13 +170,13 @@ def biliteralFilterDemo():
 
 def main():
     print("ID:", myID())
-    # conv1Demo() work
-    # conv2Demo() work
-    # derivDemo() # work but should check
-    # blurDemo() not working
-    # edgeDemo() not working
+    # conv1Demo()
+    # conv2Demo()
+    # derivDemo()
+    # blurDemo()
+    # edgeDemo() working weird, need to check it
     # houghDemo() work(IDK if right answer) slowly
-    # biliteralFilterDemo() not working
+    # biliteralFilterDemo() # working but with high MSE error, need to fix it
     sys.exit()
 
 

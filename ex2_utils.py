@@ -119,7 +119,7 @@ def blurImage2(in_image: np.ndarray, k_size: int) -> np.ndarray:
     :param k_size: Kernel size
     :return: The Blurred image
     """
-    if k_size % 2 != 0:
+    if k_size % 2 == 0:
         raise "The kernel size should always be an odd number"
 
     # the length for 99 percentile of gaussian pdf is 6 sigma
@@ -137,14 +137,18 @@ def edgeDetectionZeroCrossingSimple(img: np.ndarray) -> np.ndarray:
     :return: Edge matrix
     """
     # derivative the smoothing image with the laplacian kernel both on x and y directions
-    deriv_vector = np.array([1, -2, 1])
-    sec_deriv_x = conv2D(img, deriv_vector)
-    sec_deriv_y = conv2D(img, deriv_vector.T)
+    deriv_vector = np.array([1, -2, 1]).reshape(3, 1)
+    # sec_deriv_x = conv2D(img, deriv_vector)
+    # sec_deriv_y = conv2D(img, deriv_vector.T)
+    sec_deriv_x = cv2.filter2D(img, -1, deriv_vector, borderType=cv2.BORDER_REPLICATE)
+    sec_deriv_y = cv2.filter2D(img, -1, deriv_vector.T, borderType=cv2.BORDER_REPLICATE)
     # adding the derivations and convolve it with the smoothed image
     conv_kernel = sec_deriv_x + sec_deriv_y
-    laplacian_img = conv2D(img, conv_kernel)
+    # laplacian_img = conv2D(img, conv_kernel)
+    laplacian_img = cv2.filter2D(img, -1, conv_kernel, borderType=cv2.BORDER_REPLICATE)
     # create a threshold by taking the maximum intensity in the laplacian image and divide it by 2
-    threshold = max(laplacian_img) / 2
+    print(laplacian_img.shape)
+    threshold = max(laplacian_img[1]) / 2
     edges_img = np.zeros_like(laplacian_img)
     # apply threshold to get the edges image
     edges_img[laplacian_img > threshold] = 255
@@ -224,9 +228,8 @@ def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: f
 
     # Calculate the spatial component of the weight matrix
     dist_diff = np.exp(- (x ** 2 + y ** 2) / (2 * sigma_space ** 2))
-
-    for i in range(bilateral_img[0]):
-        for j in range(bilateral_img[1]):
+    for i in range(bilateral_img.shape[0]):
+        for j in range(bilateral_img.shape[1]):
             # Get the current pixel value
             center = image_padded[i:i + k_size, j:j + k_size]
             # Calculate the intensity component of the weight matrix
