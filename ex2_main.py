@@ -1,7 +1,12 @@
+import sys
+
 from ex2_utils import *
 import matplotlib.pyplot as plt
 import cv2
 import time
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
 def MSE(a: np.ndarray, b: np.ndarray) -> float:
@@ -27,7 +32,7 @@ def conv1Demo():
 
 
 def conv2Demo():
-    img = cv2.imread('input/beach.jpeg', cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread('beach.jpg', cv2.IMREAD_GRAYSCALE)
     kernel = np.ones((5, 5))
     kernel = kernel / kernel.sum()
     c_img = conv2D(img, kernel) / 255
@@ -44,7 +49,7 @@ def conv2Demo():
 
 
 def derivDemo():
-    img = cv2.imread('input/beach.jpeg', cv2.IMREAD_GRAYSCALE) / 255
+    img = cv2.imread('beach.jpg', cv2.IMREAD_GRAYSCALE) / 255
     ori, mag = convDerivative(img)
 
     f, ax = plt.subplots(1, 2)
@@ -70,7 +75,7 @@ def derivDemo():
 
 
 def blurDemo():
-    img = cv2.imread('input/beach.jpeg', cv2.IMREAD_GRAYSCALE) / 255
+    img = cv2.imread('beach.jpg', cv2.IMREAD_GRAYSCALE) / 255
     k_size = 5
     b1 = blurImage1(img, k_size)
     b2 = blurImage2(img, k_size)
@@ -85,7 +90,7 @@ def blurDemo():
 
 
 def edgeDemoSimple():
-    img = cv2.imread('input/codeMonkey.jpeg', cv2.IMREAD_GRAYSCALE) / 255
+    img = cv2.imread('codeMonkey.jpg', cv2.IMREAD_GRAYSCALE) / 255
     img = cv2.resize(img, (0, 0), fx=.25, fy=.25)
     edge_matrix = edgeDetectionZeroCrossingSimple(img)
 
@@ -98,7 +103,7 @@ def edgeDemoSimple():
 
 
 def edgeDemoLOG():
-    img = cv2.imread('input/boxMan.jpeg', cv2.IMREAD_GRAYSCALE) / 255
+    img = cv2.imread('boxMan.jpg', cv2.IMREAD_GRAYSCALE) / 255
     img = cv2.resize(img, (0, 0), fx=.25, fy=.25)
     edge_matrix = edgeDetectionZeroCrossingLOG(img)
 
@@ -116,7 +121,7 @@ def edgeDemo():
 
 
 def houghDemo():
-    img = cv2.imread('input/coins.jpeg', cv2.IMREAD_GRAYSCALE) / 255
+    img = cv2.imread('coins.jpg', cv2.IMREAD_GRAYSCALE) / 255
     min_r, max_r = 50, 100
 
     # # TEST WITH YOUR IMPLEMENT ONLY
@@ -126,29 +131,33 @@ def houghDemo():
     # Mine
     st = time.time()
     hough_rings = houghCircle(img, min_r, max_r)
+    print(hough_rings)
     print("Hough Time[Mine]: {:.3f} sec".format(time.time() - st))
     # OpenCV
     st = time.time()
     cv2_cir = cv2.HoughCircles((img * 255).astype(np.uint8), cv2.HOUGH_GRADIENT, 1, minDist=30, param1=500,
                                param2=80, minRadius=min_r, maxRadius=max_r)
     print("Hough Time[CV]: {:.3f} sec".format(time.time() - st))
-
+    print("Finish calculating the times")
     fig, ax = plt.subplots()
     ax.imshow(img, cmap='gray')
+    print("finish to create a figure for plotting")
     # Mine
     for c in hough_rings:
         circle1 = plt.Circle((c[0], c[1]), c[2], color='r', fill=False, linewidth=3)
         ax.add_artist(circle1)
     plt.show()
+    print("done plotting the first circles")
     # OpenCV
     for c in cv2_cir[0]:
         circle1 = plt.Circle((c[0], c[1]), c[2], color='g', fill=False, linewidth=2)
         ax.add_artist(circle1)
     plt.show()
+    print("done plotting the second circles")
 
 
 def biliteralFilterDemo():
-    img = cv2.imread('input/boxMan.jpeg', cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread('boxMan.jpg', cv2.IMREAD_GRAYSCALE)
     cv2.imwrite("original_image_grayscale.jpg", img)
 
     filtered_image_CV, filtered_image_my = bilateral_filter_implement(img, 9, 8.0, 1.0)
@@ -160,14 +169,15 @@ def biliteralFilterDemo():
 
 
 def main():
-    # print("ID:", myID())
-    # conv1Demo()
-    # conv2Demo()
-    derivDemo()
-    blurDemo()
-    # edgeDemo()
-    # houghDemo()
-    # biliteralFilterDemo()
+    print("ID:", myID())
+    # conv1Demo() work
+    # conv2Demo() work
+    # derivDemo() # work but should check
+    # blurDemo() not working
+    # edgeDemo() not working
+    # houghDemo() work(IDK if right answer) slowly
+    # biliteralFilterDemo() not working
+    sys.exit()
 
 
 if __name__ == '__main__':

@@ -1,14 +1,14 @@
-# import math
+import math
 import numpy as np
 import cv2
 
 
-def myID() -> np.int:
+def myID() -> int:
     """
     Return my ID (not the friend's ID I copied from)
     :return: int
     """
-    return np.int(214423147)
+    return int(214423147)
 
 
 def conv1D(in_signal: np.ndarray, k_size: np.ndarray) -> np.ndarray:
@@ -56,44 +56,17 @@ def conv2D(in_image: np.ndarray, kernel: np.ndarray) -> np.ndarray:
     # calculate the number of pixels to add for each axis since we need to perform the padding like the
     # cv2.BORDER_REPLICATE type so I use the same padding method with edge mode so we can save the edges
     # of rhe original image
-    num_of_edge_padding = kernel_flipped[0] // 2
+    num_of_edge_padding = kernel_flipped.shape[0] // 2
     img_mat = np.pad(in_image, pad_width=num_of_edge_padding, mode='edge')
     res_mat = np.zeros(in_image.shape)
-    for i in range(img_mat.shape[0]):
-        for j in range(img_mat.shape[1]):
+    for i in range(res_mat.shape[0]):
+        for j in range(res_mat.shape[1]):
             conv_pixel = 0
             for k in range(kernel_flipped.shape[0]):
                 for l in range(kernel_flipped.shape[1]):
-                    conv_pixel += img_mat[i + k, j + l] * kernel_flipped[k, l]
+                    conv_pixel += img_mat[k+i, l+j] * kernel_flipped[k, l]
             res_mat[i, j] = conv_pixel
     return res_mat
-
-
-# def conv2D(image: np.ndarray, kernel: np.ndarray) -> np.ndarray:
-#     # Compute the dimensions of the input image and kernel
-#     rows, cols = image.shape
-#     kernel_rows, kernel_cols = kernel.shape
-#
-#     # Compute the padding needed for valid convolution
-#     pad_height = kernel_rows // 2
-#     pad_width = kernel_cols // 2
-#
-#     # Initialize output matrix
-#     output = np.zeros((rows - 2 * pad_height, cols - 2 * pad_width))
-#
-#     # Flip the kernel
-#     kernel = np.flip(kernel)
-#
-#     # Pad the image with zeros
-#     image_padded = np.pad(image, ((pad_height, pad_height), (pad_width, pad_width)), 'constant')
-#
-#     # Compute convolution
-#     for i in range(pad_height, rows + pad_height):
-#         for j in range(pad_width, cols + pad_width):
-#             output[i - pad_height, j - pad_width] = np.sum(
-#                 image_padded[i - pad_height:i + pad_height + 1, j - pad_width:j + pad_width + 1] * kernel)
-#
-#     return output
 
 
 def convDerivative(in_image: np.ndarray) -> (np.ndarray, np.ndarray):
@@ -105,15 +78,16 @@ def convDerivative(in_image: np.ndarray) -> (np.ndarray, np.ndarray):
     # derivative vectors
     rows_vec = np.array([1, 0, -1])
     column_vec = rows_vec.T
-
-    x_derivative = conv2D(in_image, rows_vec)
-    y_derivative = conv2D(in_image, column_vec)
+    # x_derivative = conv2D(in_image, rows_vec)
+    # y_derivative = conv2D(in_image, column_vec)
+    x_derivative = cv2.filter2D(in_image, -1, rows_vec, borderType=cv2.BORDER_REPLICATE)
+    y_derivative = cv2.filter2D(in_image, -1, column_vec, borderType=cv2.BORDER_REPLICATE)
     """
     Magnitude = |∇f| =  √((∂f/∂x)² + (∂f/∂y)²)
     Direction = α = arc-tan((∂f/∂y) / (∂f/∂x))
     """
-    magnitude = np.sqrt(np.power(x_derivative, 2) + np.power(y_derivative, 2)).asype(np.float64)
-    direction = np.arctan2(y_derivative / x_derivative).asype(np.float64)
+    magnitude = np.sqrt(np.power(x_derivative, 2) + np.power(y_derivative, 2))
+    direction = np.arctan2(y_derivative, x_derivative)
     return direction, magnitude
 
 
@@ -192,14 +166,44 @@ def edgeDetectionZeroCrossingLOG(img: np.ndarray) -> np.ndarray:
 def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     """
     Find Circles in an image using a Hough Transform algorithm extension
-    To find Edges you can Use Opencv2 function: cv22.Canny
+    To find Edges you can Use Opencv2 function: cv2.Canny
     :param img: Input image
     :param min_radius: Minimum circle radius
     :param max_radius: Maximum circle radius
     :return: A list containing the detected circles,
                 [(x,y,radius),(x,y,radius),...]
     """
+    # I use cv2.Canny to detect edges in the image but first, I blurred the image with Gaussian blurring
+    # and set the threshold that seems right to me after some trial and error.
+    blur_img = np.uint8(cv2.GaussianBlur(img, (5, 5), 2.5))
+    edges = cv2.Canny(blur_img, threshold1=50, threshold2=150)
+    # Initialize accumulator array
+    accumulator = np.zeros((img.shape[0], img.shape[1], max_radius - min_radius + 1), dtype=np.uint64)
 
+    # Define the radius range to be searched
+    radius_range = range(min_radius, max_radius + 1)
+
+    # Loop over all radii and vote for each circle
+    for r in radius_range:
+        # Create a circle template with the current radius
+        circle_template = np.zeros((r * 2 + 1, r * 2 + 1), dtype=np.uint8)
+        cv2.circle(circle_template, (r, r), r, 255, 1)
+
+        # Perform the Hough Transform for circles of the current radius
+        convolved = cv2.filter2D(edges, -1, circle_template)
+        accumulator[:, :, r - min_radius] = convolved
+
+    # Find the maximum values in the accumulator array
+    max_vals = np.amax(accumulator, axis=2)
+
+    # Find the coordinates and radius of the circles with maximum votes
+    circles = []
+    for r in radius_range:
+        maxima = np.argwhere(accumulator[:, :, r - min_radius] == max_vals)
+        for i in range(len(maxima)):
+            circles.append((maxima[i][1], maxima[i][0], r))
+
+    return circles
 
 def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: float, sigma_space: float) -> (
         np.ndarray, np.ndarray):
