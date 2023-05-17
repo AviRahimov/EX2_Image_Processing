@@ -1,4 +1,3 @@
-import math
 import numpy as np
 import cv2
 
@@ -64,7 +63,7 @@ def conv2D(in_image: np.ndarray, kernel: np.ndarray) -> np.ndarray:
             conv_pixel = 0
             for k in range(kernel_flipped.shape[0]):
                 for l in range(kernel_flipped.shape[1]):
-                    conv_pixel += img_mat[k+i, l+j] * kernel_flipped[k, l]
+                    conv_pixel += img_mat[k + i, l + j] * kernel_flipped[k, l]
             res_mat[i, j] = conv_pixel
     return res_mat
 
@@ -94,7 +93,7 @@ def convDerivative(in_image: np.ndarray) -> (np.ndarray, np.ndarray):
 def blurImage1(in_image: np.ndarray, k_size: int) -> np.ndarray:
     """
     Blur an image using a Gaussian kernel
-    :param in_image: Input image
+    :param in_image: img image
     :param k_size: Kernel size
     :return: The Blurred image
     """
@@ -115,7 +114,7 @@ def blurImage1(in_image: np.ndarray, k_size: int) -> np.ndarray:
 def blurImage2(in_image: np.ndarray, k_size: int) -> np.ndarray:
     """
     Blur an image using a Gaussian kernel using Opencv2 built-in functions
-    :param in_image: Input image
+    :param in_image: img image
     :param k_size: Kernel size
     :return: The Blurred image
     """
@@ -133,37 +132,72 @@ def blurImage2(in_image: np.ndarray, k_size: int) -> np.ndarray:
 def edgeDetectionZeroCrossingSimple(img: np.ndarray) -> np.ndarray:
     """
     Detecting edges using "ZeroCrossing" method
-    :param img: Input image
+    :param img: img image
     :return: Edge matrix
     """
-    # derivative the smoothing image with the laplacian kernel both on x and y directions
-    deriv_vector = np.array([1, -2, 1]).reshape(3, 1)
-    # sec_deriv_x = conv2D(img, deriv_vector)
-    # sec_deriv_y = conv2D(img, deriv_vector.T)
-    sec_deriv_x = cv2.filter2D(img, -1, deriv_vector, borderType=cv2.BORDER_REPLICATE)
-    sec_deriv_y = cv2.filter2D(img, -1, deriv_vector.T, borderType=cv2.BORDER_REPLICATE)
-    # adding the derivations and convolve it with the smoothed image
-    conv_kernel = sec_deriv_x + sec_deriv_y
-    # laplacian_img = conv2D(img, conv_kernel)
-    laplacian_img = cv2.filter2D(img, -1, conv_kernel, borderType=cv2.BORDER_REPLICATE)
+    # Laplacian kernel for finding both horizontal and vertical edges
+    laplacian_operator = np.array([1, 4, 1,
+                                   4, -20, 4,
+                                   1, 4, 1])
+    # laplacian_img = conv2D(img, laplacian_operator)
+    laplacian_img = cv2.filter2D(img, -1, laplacian_operator, borderType=cv2.BORDER_REPLICATE)
     # create a threshold by taking the maximum intensity in the laplacian image and divide it by 2
-    print(laplacian_img.shape)
-    threshold = max(laplacian_img[1]) / 2
+    threshold_img = cv2.threshold(laplacian_img, 0, 255, cv2.THRESH_BINARY)[1]
     edges_img = np.zeros_like(laplacian_img)
+    # Find zero-crossings in the binary image
+    height, width = threshold_img.shape
+    for i in range(1, height - 1):
+        for j in range(1, width - 1):
+            if threshold_img[i, j] == 255:
+                if threshold_img[i - 1, j] == 0 or threshold_img[i + 1, j] == 0 or threshold_img[i, j - 1] == 0 or \
+                        threshold_img[i, j + 1] == 0:
+                    edges_img[i, j] = 255
+                else:
+                    edges_img[i, j] = 0
     # apply threshold to get the edges image
-    edges_img[laplacian_img > threshold] = 255
-    edges_img[laplacian_img <= threshold] = 0
+    # edges_img[laplacian_img > threshold] = 255
+    # edges_img[laplacian_img <= threshold] = 0
     return edges_img
+    # crossing_zero_img = np.zeros(img.shape)
+    #
+    # for i in range(laplacian_img.shape[0]):
+    #     for j in range(laplacian_img.shape[1]):
+    #         # to check if there is "zero cross"
+    #         # we'll have to count the positive and the negative value as well
+    #         positive_count = 0
+    #         negative_count = 0
+    #
+    #         neighbour_pixels = [laplacian_img[i + 1, j - 1], laplacian_img[i + 1, j], laplacian_img[i + 1, j + 1], laplacian_img[i, j - 1],
+    #                             laplacian_img[i, j + 1], laplacian_img[i - 1, j - 1], laplacian_img[i - 1, j], laplacian_img[i - 1, j + 1]]
+    #
+    #         max_pixel_value = max(neighbour_pixels)
+    #         min_pixel_value = min(neighbour_pixels)
+    #
+    #         for pixel in neighbour_pixels:
+    #             if pixel > 0:
+    #                 positive_count += 1
+    #
+    #             elif pixel < 0:
+    #                 negative_count += 1
+    #
+    #         if (negative_count > 0) and (positive_count > 0):
+    #             # there is "zero cross"
+    #             if img[i, j] > 0:
+    #                 crossing_zero_img[i, j] = img[i, j] + np.abs(min_pixel_value)
+    #             elif img[i, j] < 0:
+    #                 crossing_zero_img[i, j] = np.abs(img[i, j]) + max_pixel_value
+    #
+    # return crossing_zero_img
 
 
 def edgeDetectionZeroCrossingLOG(img: np.ndarray) -> np.ndarray:
     """
     Detecting edges using "ZeroCrossingLOG" method
-    :param img: Input image
+    :param img: img image
     :return: Edge matrix
     """
     # smoothing the image
-    smoothed_img = blurImage2(img, 5)
+    smoothed_img = cv2.GaussianBlur(img, (5, 5), 0)
     return edgeDetectionZeroCrossingSimple(smoothed_img)
 
 
@@ -171,54 +205,62 @@ def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     """
     Find Circles in an image using a Hough Transform algorithm extension
     To find Edges you can Use Opencv2 function: cv2.Canny
-    :param img: Input image
+    :param img: img image
     :param min_radius: Minimum circle radius
     :param max_radius: Maximum circle radius
     :return: A list containing the detected circles,
                 [(x,y,radius),(x,y,radius),...]
     """
-    # I use cv2.Canny to detect edges in the image but first, I blurred the image with Gaussian blurring
+    circles_list = []
+    # after some tests and online search this is the threshold that suited to most of the inputs.
+    threshold = 2.5
+    # If the intensities between 0-1 so we normalize it to be between 0-255
+    if img.max() <= 1:
+        img = (cv2.normalize(img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)).astype('uint8')
+    # Initialize accumulator array i.e. the 3D array that represent at each dimension the circles with a specific radius
+    accumulator = np.zeros((len(img), len(img[0]), max_radius + 1))
+    # Calculating the sobel
+    x_derivative = cv2.Sobel(img, cv2.CV_64F, 1, 0, threshold)
+    y_derivative = cv2.Sobel(img, cv2.CV_64F, 0, 1, threshold)
+    # Calculating the direction(angle).
+    direction = np.arctan2(y_derivative, x_derivative)
+    direction = np.radians(direction * 180 / np.pi)
+
+    # I use cv2.Canny to detect edges in the image
     # and set the threshold that seems right to me after some trial and error.
-    blur_img = np.uint8(cv2.GaussianBlur(img, (5, 5), 2.5))
-    edges = cv2.Canny(blur_img, threshold1=50, threshold2=150)
-    # Initialize accumulator array
-    accumulator = np.zeros((img.shape[0], img.shape[1], max_radius - min_radius + 1), dtype=np.uint64)
+    edges = cv2.Canny(img, threshold1=75, threshold2=150)
+    for x in range(len(edges)):
+        for y in range(len(edges[0])):
+            # if this pixel is an edge
+            if edges[x][y] == 255:
+                for rad in range(min_radius, max_radius + 1):
+                    angle = direction[x, y] - np.pi / 2
+                    x1, x2 = (x - rad * np.cos(angle)).astype(np.int32), (x + rad * np.cos(angle)).astype(np.int32)
+                    y1, y2 = (y + rad * np.sin(angle)).astype(np.int32), (y - rad * np.sin(angle)).astype(np.int32)
+                    if 0 < x1 < len(accumulator) and 0 < y1 < len(accumulator[0]):
+                        accumulator[x1, y1, rad] += 1
+                    if 0 < x2 < len(accumulator) and 0 < y2 < len(accumulator[0]):
+                        accumulator[x2, y2, rad] += 1
+    # updating the threshold
+    threshold = np.multiply(np.max(accumulator), 1 / 2) + 1
+    # getting the circles that are after the threshold
+    x, y, rad = np.where(accumulator >= threshold)
+    circles_list.extend((y[i], x[i], rad[i]) for i in range(len(x)) if x[i] != 0 or y[i] != 0 or rad[i] != 0)
+    return circles_list
 
-    # Define the radius range to be searched
-    radius_range = range(min_radius, max_radius + 1)
-
-    # Loop over all radii and vote for each circle
-    for r in radius_range:
-        # Create a circle template with the current radius
-        circle_template = np.zeros((r * 2 + 1, r * 2 + 1), dtype=np.uint8)
-        cv2.circle(circle_template, (r, r), r, 255, 1)
-
-        # Perform the Hough Transform for circles of the current radius
-        convolved = cv2.filter2D(edges, -1, circle_template)
-        accumulator[:, :, r - min_radius] = convolved
-
-    # Find the maximum values in the accumulator array
-    max_vals = np.amax(accumulator, axis=2)
-
-    # Find the coordinates and radius of the circles with maximum votes
-    circles = []
-    for r in radius_range:
-        maxima = np.argwhere(accumulator[:, :, r - min_radius] == max_vals)
-        for i in range(len(maxima)):
-            circles.append((maxima[i][1], maxima[i][0], r))
-
-    return circles
 
 def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: float, sigma_space: float) -> (
         np.ndarray, np.ndarray):
     """
-    :param in_image: input image
+    :param in_image: img image
     :param k_size: Kernel size
     :param sigma_color: represents the filter sigma in the color space.
     :param sigma_space: represents the filter sigma in the coordinate.
     :return: Opencv2 implementation, my implementation
     """
+    # Opencv2 implementation
     cv_func = cv2.bilateralFilter(in_image, k_size, sigma_color, sigma_space)
+
     num_of_pixels_to_pad = k_size // 2
     image_padded = np.pad(in_image, pad_width=num_of_pixels_to_pad, mode='edge')
     bilateral_img = np.zeros_like(in_image)

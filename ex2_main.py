@@ -131,29 +131,24 @@ def houghDemo():
     # Mine
     st = time.time()
     hough_rings = houghCircle(img, min_r, max_r)
-    print(hough_rings)
     print("Hough Time[Mine]: {:.3f} sec".format(time.time() - st))
     # OpenCV
     st = time.time()
     cv2_cir = cv2.HoughCircles((img * 255).astype(np.uint8), cv2.HOUGH_GRADIENT, 1, minDist=30, param1=500,
                                param2=80, minRadius=min_r, maxRadius=max_r)
     print("Hough Time[CV]: {:.3f} sec".format(time.time() - st))
-    print("Finish calculating the times")
     fig, ax = plt.subplots()
     ax.imshow(img, cmap='gray')
-    print("finish to create a figure for plotting")
     # Mine
     for c in hough_rings:
         circle1 = plt.Circle((c[0], c[1]), c[2], color='r', fill=False, linewidth=3)
         ax.add_artist(circle1)
     plt.show()
-    print("done plotting the first circles")
     # OpenCV
-    for c in cv2_cir[0]:
-        circle1 = plt.Circle((c[0], c[1]), c[2], color='g', fill=False, linewidth=2)
-        ax.add_artist(circle1)
-    plt.show()
-    print("done plotting the second circles")
+    # for c in cv2_cir[0]:
+    #     circle1 = plt.Circle((c[0], c[1]), c[2], color='g', fill=False, linewidth=2)
+    #     ax.add_artist(circle1)
+    # plt.show()
 
 
 def biliteralFilterDemo():
@@ -174,8 +169,8 @@ def main():
     # conv2Demo()
     # derivDemo()
     # blurDemo()
-    # edgeDemo() working weird, need to check it
-    # houghDemo() work(IDK if right answer) slowly
+    # edgeDemo() # working weird, need to check it
+    houghDemo()  # work(IDK if right answer) slowly
     # biliteralFilterDemo() # working but with high MSE error, need to fix it
     sys.exit()
 
